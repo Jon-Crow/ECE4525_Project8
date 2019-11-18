@@ -11,246 +11,142 @@ var sketchProc = function(processingInstance)
 	frameRate(60);
 	size(400,400);
 	
-	/*-------------------------
-	Degree to radian conversion
-	constants
-	-------------------------*/
-	var deg0     = 0;
-	var deg90    = Math.PI/2;
-	var deg180   = Math.PI;
-	var deg270   = 3*Math.PI/2;
-	var deg360   = 2*Math.PI;
-	var degToRad = Math.PI/180;
-	
-	var keyArray = [];
-	
-	var keyPressed = function() 
+	var backgroundColour = color(255, 255, 255);
+	var nodeColour       = color(40, 168, 107);
+	var edgeColour       = color(34, 68, 204);
+	var nodeSize         = 8;
+	var degToRad         = Math.PI/180;
+
+	var createCuboid = function(x, y, z, w, h, d)
 	{
-		keyArray[keyCode] = 1;
+		var nodes = [[x,   y,   z  ],
+					[x,   y,   z+d],
+					[x,   y+h, z  ],
+					[x,   y+h, z+d],
+					[x+w, y,   z  ],
+					[x+w, y,   z+d],
+					[x+w, y+h, z  ],
+					[x+w, y+h, z+d]];
+		var edges = [[0, 1], [1, 3], [3, 2], [2, 0],
+					[4, 5], [5, 7], [7, 6], [6, 4],
+					[0, 4], [1, 5], [2, 6], [3, 7]];
+		return { 'nodes': nodes, 'edges': edges };
 	};
-	var keyReleased = function() 
+
+	var createChair = function(x, y, z)
 	{
-		keyArray[keyCode] = 0;
-	};
-	var mouseReleased = function()
-	{
-		gameState.clickEvent(mouseX, mouseY);
-	};
-	
-	var imgs      = [];
-	var imgWall   = 0;
-	var imgGround = 1;
-	var imgPlayer = 2;
-	
-	var initImages = function()
-	{
-		imgs[imgWall]   = loadImage("img/wall.png");
-		imgs[imgGround] = loadImage("img/ground.png");
-		imgs[imgPlayer] = loadImage("img/player.png");
+		var shapes = [];
+		shapes.push(createCuboid(x-100,y-150,z,25,325,25));
+		shapes.push(createCuboid(x+75,y-150,z,25,325,25));
+		shapes.push(createCuboid(x-75,y-125,z,150,150,25));
+		shapes.push(createCuboid(x-100,y+50,z+25,200,25,-200));
+		shapes.push(createCuboid(x-100,y+75,z-175,25,100,25));
+		shapes.push(createCuboid(x+75,y+75,z-175,25,100,25));
+		return shapes;
 	};
 	
-	initImages();
-	
-	var tileMap = [
-	"wwwwwwwwwwwwwwwwwwww",
-	"w                  w",
-	"wwwwwwww     wwwwwww",
-	"w                  w",
-	"w  wwwwwwwwwwwwww  w",
-	"w                  w",
-	"w wwwww wwwww wwww w",
-	"w w              w w",
-	"w w              w w",
-	"w w   wwwwwwww   w w",
-	"w w   wwwwwwww   w w",
-	"w w              w w",
-	"w w              w w",
-	"w wwwwww     wwwww w",
-	"w                  w",
-	"w  wwwwwwwwwwwwww  w",
-	"w                  w",
-	"wwwwwww wwwww wwwwww",
-	"w                  w",
-	"wwwwwwwwwwwwwwwwwwww"
-	];
-	
-	//HALF PAGE RESPONSE ON OPHELIAS DEATH!
-	
-	var TileMap = function(tileMap)
+	var shapes = createChair(0, 0, 0);
+
+	// Rotate shape around the z-axis
+	var rotateZ3D = function(theta, nodes) 
 	{
-		this.imgs = [];
-		this.vecs = [];
-		for(var y = 0; y < tileMap.length; y++)
+		var sinTheta = sin(theta*degToRad);
+		var cosTheta = cos(theta*degToRad);
+
+		for (var n = 0; n < nodes.length; n++) 
 		{
-			var row = [];
-			for(var x = 0; x < tileMap[y].length; x++)
-			{
-				if(tileMap[y][x] == "w")
-					row.push(imgWall);
-				else if(tileMap[y][x] == " ")
-					row.push(imgGround);
-				else
-					console.log("ERROR LOADING TILEMAP: Unknown tile: " + tileMap[y][x]);
-			}
-			this.imgs.push(row);
-		}
-		for(var y = 0; y < this.imgs.length; y++)
-		{
-			var vecRow = [];
-			for(var x = 0; x < this.imgs[y].length; x++)
-			{
-				var vecCon = [];
-				if(this.imgs[y][x] === imgGround)
-				{
-					if(y > 0 && this.imgs[y-1][x] === imgGround)
-						vecCon.push(new PVector(x*20+10,(y-1)*20+10));
-					if(y < this.imgs.length-1 && this.imgs[y+1][x] === imgGround)
-						vecCon.push(new PVector(x*20+10,(y+1)*20+10));
-					if(x > 0 && this.imgs[y][x-1] === imgGround)
-						vecCon.push(new PVector((x-1)*20+10,y*20+10));
-					if(x < this.imgs[y].length-1 && this.imgs[y][x+1] === imgGround)
-						vecCon.push(new PVector((x+1)*20+10,y*20+10));
-				}
-				vecRow.push(vecCon);
-			}
-			this.vecs.push(vecRow);
+			var node = nodes[n];
+			var x = node[0];
+			var y = node[1];
+			node[0] = x * cosTheta - y * sinTheta;
+			node[1] = y * cosTheta + x * sinTheta;
 		}
 	};
-	TileMap.prototype.display = function()
+
+	var rotateY3D = function(theta, nodes) 
 	{
-		for(var y = 0; y < this.imgs.length; y++)
-			for(var x = 0; x < this.imgs[y].length; x++)
-				image(imgs[this.imgs[y][x]],x*20,y*20);
-		
-		stroke(0,0,0);
-		for(var y = 0; y < this.vecs.length; y++)
-			for(var x = 0; x < this.vecs[y].length; x++)
-				for(var z = 0; z < this.vecs[y][x].length; z++)
-					line(x*20+10,y*20+10,this.vecs[y][x][z].x,this.vecs[y][x][z].y);
+		var sinTheta = sin(theta*degToRad);
+		var cosTheta = cos(theta*degToRad);
+
+		for (var n = 0; n < nodes.length; n++) 
+		{
+			var node = nodes[n];
+			var x = node[0];
+			var z = node[2];
+			node[0] = x * cosTheta - z * sinTheta;
+			node[2] = z * cosTheta + x * sinTheta;
+		}
+	};
+
+	var rotateX3D = function(theta, nodes) 
+	{
+		var sinTheta = sin(theta*degToRad);
+		var cosTheta = cos(theta*degToRad);
+
+		for (var n = 0; n < nodes.length; n++) 
+		{
+			var node = nodes[n];
+			var y = node[1];
+			var z = node[2];
+			node[1] = y * cosTheta - z * sinTheta;
+			node[2] = z * cosTheta + y * sinTheta;
+		}
+	};
+
+	//rotateZ3D(30);
+	//rotateY3D(30);
+	//rotateX3D(30);
+
+	var draw = function() 
+	{
+		background(backgroundColour);
+		var nodes, edges;
+
+		// Draw edges
+		stroke(edgeColour);
+
+		for (var shapeNum = 0; shapeNum < shapes.length; shapeNum++) 
+		{
+			nodes = shapes[shapeNum].nodes;
+			edges = shapes[shapeNum].edges;
+			for (var e = 0; e < edges.length; e++) 
+			{
+				var n0 = edges[e][0];
+				var n1 = edges[e][1];
+				var node0 = nodes[n0];
+				var node1 = nodes[n1];
+				line(node0[0], node0[1], node1[0], node1[1]);
+			}   
+		}
+
+		// Draw nodes
+		fill(nodeColour);
 		noStroke();
-		
-	};
-	TileMap.prototype.getPathConnections = function(x, y)
-	{
-	};
-	
-	var PathNode = function(x, y, par)
-	{
-		this.x   = x;
-		this.y   = y;
-		this.par = par;
-		this.f   = -1;
-	};
-	PathNode.prototype.getX      = function() { return this.x;   };
-	PathNode.prototype.getY      = function() { return this.y;   };
-	PathNode.prototype.getParent = function() { return this.par; };
-	PathNode.prototype.getF = function(start, end) 
-	{
-		if(this.f === -1)
+		for (var shapeNum = 0; shapeNum < shapes.length; shapeNum++) 
 		{
-			var g  = dist(x,y,start.getX(),start.getY());
-			var h  = dist(x,y,end.getX(),end.getY());
-			this.f = g+h;
-		}
-		return this.f;
-	};
-	PathNode.prototype.equals = function(node)
-	{
-		return this.x === node.getX() && this.y === node.getY();
-	};
-	
-	var getPath = function(x1, y1, x2, y2, map)
-	{
-		var start        = new PathNode(x1, y1, null);
-		var end          = new PathNode(x2, y2, null);
-		var nodes_open   = [start];
-		var nodes_closed = [];
-		
-		while(nodes_open.length > 0)
-		{
-			var minF    = nodes_open[0];
-			var minF_in = 0;
-			for(var i = 1; i < nodes_open.length; i++)
+			nodes = shapes[shapeNum].nodes;
+			for (var n = 0; n < nodes.length; n++) 
 			{
-				if(nodes_open[i].getF() < minF.getF())
-				{
-					minF    = nodes_open[i];
-					minF_in = i;
-				}
+				var node = nodes[n];
+				ellipse(node[0], node[1], nodeSize, nodeSize);
 			}
-			nodes_open.splice(i,1);
-			nodes_closed.push(minF);
-			if(minF.equals(end))
-			{
-				var path = [];
-				var step = minF;
-				while(step !== null)
-				{
-					path.push(step);
-					step = step.getParent();
-				}
-				return path.reverse();
-			}
-			
 		}
 	};
-	
-	var Player = function(x, y)
+
+	mouseDragged = function() 
 	{
-		this.pos = new PVector(x, y);
-	};
-	Player.prototype.display = function()
-	{
-		image(imgs[imgPlayer],this.pos.x-10,this.pos.y-10,20,20);
-	};
-	Player.prototype.update = function()
-	{};
-	
-	var MenuGameState = function()
-	{
-		this.tileMap = new TileMap(tileMap);
-		this.plyr    = new Player(30,30);
-	};
-	MenuGameState.prototype.display = function()
-	{
-		background(255,0,0);
-		this.tileMap.display();
-		this.plyr.display();
-	};
-	MenuGameState.prototype.update = function()
-	{
-		this.plyr.update();
-	};
-	MenuGameState.prototype.getNextState = function()
-	{
-		return this;
-	};
-	MenuGameState.prototype.clickEvent = function(x, y)
-	{};
-	
-	var gameState = new MenuGameState();
-	
-	var showFPS  = 1;
-	var lastTime = 0;
-	
-	draw = function() 
-	{
-		gameState.update();
-		gameState.display();
-		gameState = gameState.getNextState();
-		
-		//calculates fps
-		var time = millis();
-		var fps = 1000/(time-lastTime);
-		lastTime = time;
-		
-		fill(0,0,0);
-		if(showFPS)
+		var dx = mouseX - pmouseX;
+		var dy = mouseY - pmouseY;
+
+		for (var shapeNum = 0; shapeNum < shapes.length; shapeNum++) 
 		{
-			textSize(10);
-			text("FPS: " + fps.toFixed(2), width-50, height-10);
-			if(fps < 50)
-				console.log("fps dropped to: " + fps);
+			var nodes = shapes[shapeNum].nodes;
+			rotateY3D(dx, nodes);
+			rotateX3D(dy, nodes);
 		}
 	};
+
+	translate(200, 200);
+
+
 }};
