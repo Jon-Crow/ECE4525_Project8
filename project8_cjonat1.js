@@ -36,21 +36,13 @@ var sketchProc = function(processingInstance)
 		return { 'nodes': nodes, 'edges': edges, 'faces' : faces, 'avgZ' : avgZ };
 	};
 	
-	/*--------------------------------------------------------------------------------------------------------------
-	THIS FUNCTION WAS TAKEN AND MODIFIED FROM: 
-	https://humanwhocodes.com/blog/2009/09/08/computer-science-in-javascript-selection-sort/
-	--------------------------------------------------------------------------------------------------------------*/
-	function swap(shapes, i1, i2)
+	var swap = function(shapes, i1, i2)
 	{
 		var temp = shapes[i1];
 		shapes[i1] = shapes[i2];
 		shapes[i2] = temp;
 	}
-	/*--------------------------------------------------------------------------------------------------------------
-	THIS FUNCTION WAS TAKEN AND MODIFIED FROM: 
-	https://humanwhocodes.com/blog/2009/09/08/computer-science-in-javascript-selection-sort/
-	--------------------------------------------------------------------------------------------------------------*/
-	function sortShapes(shapes)
+	var sortShapes = function(shapes)
 	{
 		var min, minI;
 		for (var i = 0; i < shapes.length; i++)
@@ -102,8 +94,10 @@ var sketchProc = function(processingInstance)
 	var createChair = function(x, y, z)
 	{
 		var shapes = [];
-		shapes.push(createCuboid(x-100,y-150,z,25,325,25));
-		shapes.push(createCuboid(x+75,y-150,z,25,325,25));
+		shapes.push(createCuboid(x-100,y-150,z,25,200,25));
+		shapes.push(createCuboid(x+75,y-150,z,25,200,25));
+		shapes.push(createCuboid(x-100,y+75,z,25,100,25));
+		shapes.push(createCuboid(x+75,y+75,z,25,100,25));
 		shapes.push(createCuboid(x-75,y-125,z,150,150,25));
 		shapes.push(createCuboid(x-100,y+50,z+25,200,25,-200));
 		shapes.push(createCuboid(x-100,y+75,z-175,25,100,25));
@@ -113,12 +107,24 @@ var sketchProc = function(processingInstance)
 	
 	var shapes = createChair(0, 0, 0);
 	
+	/*
 	var computeAvgZ = function(nodes)
 	{
 		var total = nodes[0][2];
 		for(var i = 1; i < nodes.length; i++)
 			total += nodes[i][2];
 		return total/nodes.length;
+	};
+	*/
+	var computeAvgZ = function(nodes)
+	{
+		var min = nodes[0][2];
+		for(var i = 1; i < nodes.length; i++)
+		{
+			if(nodes[i][2] < min)
+				min = nodes[i][2];
+		}
+		return min;
 	};
 	// Rotate shape around the z-axis
 	var rotateZ3D = function(theta, nodes) 
