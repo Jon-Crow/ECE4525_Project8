@@ -52,27 +52,31 @@ var sketchProc = function(processingInstance)
 	--------------------------------------------------------------------------------------------------------------*/
 	function sortShapes(shapes)
 	{
-		var min;
+		var min, minI;
 		for (var i = 0; i < shapes.length; i++)
 		{
-			min = shapes[i].avgZ;
+			minI = i;
+			min  = shapes[i].avgZ;
 			for (j = i+1; j < shapes.length; j++)
 			{
-				if (shapes[j].avgZ < shapes[min].avgZ)
-					min = j;
+				if (shapes[j].avgZ < shapes[minI].avgZ)
+				{
+					minI = j;
+					min  = shapes[j].avgZ;
+				}
 			}
-			if (i != min)
-				swap(shapes, i, min);
+			if (i != minI)
+				swap(shapes, i, minI);
 			sortFaces(shapes[i]);
 		}
 		return shapes;
 	}
-	var faceAvgZ = function(shape, face)
+	var faceMinZ = function(shape, face)
 	{
-		var total = 0, nodes = shape.nodes;
-		for(var i = 0; i < face.length; i++)
+		var nodes = shape.nodes, total = nodes[face[0]][2];
+		for(var i = 1; i < face.length; i++)
 			total += nodes[face[i]][2];
-		return total/face.length;
+		return total;
 	};
 	function sortFaces(shape)
 	{
@@ -80,11 +84,11 @@ var sketchProc = function(processingInstance)
 		for(var i = 0; i < faces.length; i++)
 		{
 			minI = i;
-			min  = faceAvgZ(shape, faces[i]);
+			min  = faceMinZ(shape, faces[i]);
 			for(var j = i+1; j < faces.length; j++)
 			{
-				jAvg = faceAvgZ(shape, faces[j]);
-				if(jAvg < min)
+				jAvg = faceMinZ(shape, faces[j]);
+				if(jAvg > min)
 				{
 					minI = j;
 					min  = jAvg;
@@ -174,7 +178,7 @@ var sketchProc = function(processingInstance)
 		// Draw edges
 		stroke(edgecolor);
 
-		for (var shapeNum = 0; shapeNum < shapes.length; shapeNum++) 
+		for (var shapeNum = shapes.length-1; shapeNum >= 0; shapeNum--) 
 		{
 			nodes = shapes[shapeNum].nodes;
 			edges = shapes[shapeNum].edges;
@@ -184,7 +188,7 @@ var sketchProc = function(processingInstance)
 			{
 				var face = faces[f];
 				beginShape();
-				for(var n = 0; n < face.length; n++)
+				for(var n = face.length-1; n >= 0; n--)
 					vertex(nodes[face[n]][0],nodes[face[n]][1]);
 				endShape();
 			}
